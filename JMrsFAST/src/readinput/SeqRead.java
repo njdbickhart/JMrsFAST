@@ -5,6 +5,8 @@
  */
 package readinput;
 
+import java.util.ArrayList;
+import java.util.List;
 import static readinput.StringUtils.*;
 
 /**
@@ -12,15 +14,19 @@ import static readinput.StringUtils.*;
  * @author desktop
  */
 public class SeqRead {
-    private int hits;
+    private final List<CompressedHit> hits = new ArrayList<>();
     public CompressedSeq compSeq;
     public CompressedSeq compRevSeq;
-    private String rName;
+    private final String rName;
+    private final String qual;
     // 0 = A, 1 = C, 2 = G, 3 = T, 4 = N
     private final short[] baseCnt = new short[5];
     
-    public SeqRead(String seq, String rName){
-        
+    public SeqRead(String seq, String rName, String qual){
+        this.rName = rName;
+        this.qual = qual;
+        CompressSeq(seq);
+        BaseCount(seq);
     }
     
     private void CompressSeq(String seq){
@@ -36,5 +42,7 @@ public class SeqRead {
         }
     }
     
-    
+    public void AddHit(CompressedHit h){
+        this.hits.add(h);
+    }
 }

@@ -15,7 +15,7 @@ import static readinput.StringUtils.BaseToIndex;
  */
 public class CompressedSeq {
     // Every 21 bases are stored within a 64bit unsigned integer
-    private final List<Long> CompSeq = new ArrayList<>();
+    private final List<Long> CompSeq = new ArrayList<>(10);
     
     public CompressedSeq(String seq){
         int i = 0, pos = 0;
