@@ -77,4 +77,11 @@ public class HashTableFactory {
         }
     }
     
+    public void RewindTable(){
+        try {
+            this.reader.seek(TableBeginningPos);
+        } catch (IOException ex) {
+            Logger.getLogger(HashTableFactory.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
 }
