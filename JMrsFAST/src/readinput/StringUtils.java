@@ -30,6 +30,16 @@ public class StringUtils {
         }
     }
     
+    public static int BaseHashVal(char s){
+        switch(s){
+            case 'A': return 0;
+            case 'C': return 1;
+            case 'G': return 2;
+            case 'T': return 3;
+            default: return -1;
+        }
+    }
+    
     public static String ReverseComplement(String seq){
         char[] temp = new char[seq.length()];
         int i = 0;

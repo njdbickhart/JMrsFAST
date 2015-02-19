@@ -10,13 +10,16 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import static refindex.HashUtils.byteArrayToInt;
 
 /**
- *
+ * This will contain the binary header from the reference index that MrsFAST generates
+ * It will also create sub-chromosome HashTables on demand
  * @author desktop
  */
 public class HashTableFactory {
@@ -34,8 +37,10 @@ public class HashTableFactory {
     private int HashTbleMemSize;
     private int HashTbleIOBuffer;
     private int ContigMaxSize;
-    private List<String> ChrNames;
-    private List<Integer> ChrSizes;
+    private List<String> ChrOrder;
+    private Map<String, Integer> ChrInfo;
+    //private List<String> ChrNames;
+    //private List<Integer> ChrSizes;
     private long TableBeginningPos;
     
     public HashTableFactory(File indexFile){
@@ -54,8 +59,10 @@ public class HashTableFactory {
             
             reader.read(temp);
             int chrcount = byteArrayToInt(temp);
-            this.ChrNames = new ArrayList<>(chrcount);
-            this.ChrSizes = new ArrayList<>(chrcount);
+            this.ChrInfo = new HashMap<>(chrcount);
+            this.ChrOrder = new ArrayList<>(chrcount);
+            //this.ChrNames = new ArrayList<>(chrcount);
+            //this.ChrSizes = new ArrayList<>(chrcount);
             
             for(int i = 0; i < chrcount; i++){
                 reader.read(temp);
@@ -63,10 +70,12 @@ public class HashTableFactory {
                 
                 byte[] name = new byte[chrnamesize];
                 reader.read(name);
-                this.ChrNames.add(new String(name, "UTF-8"));
+                //this.ChrNames.add(new String(name, "UTF-8"));
+                this.ChrOrder.add(new String(name, "UTF-8"));
                 
                 reader.read(temp);
-                this.ChrSizes.add(byteArrayToInt(temp));
+                //this.ChrSizes.add(byteArrayToInt(temp));
+                this.ChrInfo.put(new String(name, "UTF-8"), byteArrayToInt(temp));
             }
             
             this.TableBeginningPos = reader.getFilePointer();
@@ -77,11 +86,36 @@ public class HashTableFactory {
         }
     }
     
+    private HashTable LoadChrTable(String chr){
+        HashTable hash = null;
+        try{
+            if(!this.ChrInfo.containsKey(chr))
+                throw new Exception("[HASHTBLFACT] Could not load index for chromosome: " + chr + "!");
+            byte[] block = new byte[this.ChrInfo.get(chr)];
+            
+            reader.read(block);
+            hash  = new HashTable(block[0]);
+            
+            hash.generateHashFromBlock(block, this.HashTbleMemSize, this.HashTbleIOBuffer);
+        }catch(Exception ex){
+            Logger.getLogger(HashTableFactory.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        return hash;
+    }
+    
     public void RewindTable(){
         try {
             this.reader.seek(TableBeginningPos);
         } catch (IOException ex) {
             Logger.getLogger(HashTableFactory.class.getName()).log(Level.SEVERE, null, ex);
         }
+    }
+    
+    public void CloseIdxFile(){
+         try {
+             this.reader.close();
+         }catch (IOException ex){
+             Logger.getLogger(HashTableFactory.class.getName()).log(Level.SEVERE, null, ex);
+         }
     }
 }
