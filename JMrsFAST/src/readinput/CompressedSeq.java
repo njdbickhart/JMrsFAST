@@ -6,8 +6,11 @@
 package readinput;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.stream.Stream;
 import static readinput.StringUtils.BaseToIndex;
+import refindex.HashUtils;
 
 /**
  *
@@ -15,10 +18,15 @@ import static readinput.StringUtils.BaseToIndex;
  */
 public class CompressedSeq {
     // Every 21 bases are stored within a 64bit unsigned integer
-    private final List<Long> CompSeq = new ArrayList<>(10);
+    public List<Long> CompSeq;
+    
+    public CompressedSeq(byte[] b) throws Exception{
+        this.CompSeq = HashUtils.sectionByteArraysToLongList(b);
+    }
     
     public CompressedSeq(String seq){
         int i = 0, pos = 0;
+        this.CompSeq = Collections.synchronizedList(new ArrayList<Long>(seq.length() / 21));
         // Start with forward sequence string
         CompSeq.add(0l);
         while(pos < seq.length()){
@@ -36,4 +44,7 @@ public class CompressedSeq {
         }
     }
     
+    public Stream<Long> getStream(){
+        return this.CompSeq.stream();
+    }
 }

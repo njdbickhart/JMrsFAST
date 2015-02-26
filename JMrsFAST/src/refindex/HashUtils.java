@@ -5,7 +5,10 @@
  */
 package refindex;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 import readinput.StringUtils;
 
 /**
@@ -13,6 +16,26 @@ import readinput.StringUtils;
  * @author desktop
  */
 public class HashUtils {
+    public static List<Long> sectionByteArraysToLongList(byte[] b) throws Exception{
+        if(b.length % 8 != 0)
+            throw new Exception("[HASHUTILS] Input byte array is not a multiple of 64 bits!");
+        List<Long> holder = Collections.synchronizedList(new ArrayList<>(b.length / 8));
+        for(int i = 0; i < b.length; i += 8){
+            long t = byteArrayToLong(getByteSlice(b, i, i + 8));
+            holder.add(t);
+        }
+        return holder;
+    }
+    
+    public static long byteArrayToLong(byte[] b){
+        long value = 0l;
+        for (int i = 0; i < b.length; i++) {
+            int shift = (b.length - 1 - i) * 8;
+            value += (b[i] & 0x000000FF) << shift;
+        }
+        return value;
+    }
+    
     public static int byteArrayToInt(byte[] b) {
         int value = 0;
         for (int i = 0; i < b.length; i++) {
