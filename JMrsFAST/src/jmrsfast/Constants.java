@@ -11,4 +11,5 @@ package jmrsfast;
  */
 public class Constants {
     public static final int MAPCHUNKS = 15;
+    public static enum MODE {PAIREDEND, SINGLEEND}; 
 }

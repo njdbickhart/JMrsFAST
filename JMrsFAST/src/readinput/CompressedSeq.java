@@ -47,4 +47,9 @@ public class CompressedSeq {
     public Stream<Long> getStream(){
         return this.CompSeq.stream();
     }
+    
+    public void destroy(){
+        this.CompSeq.clear();
+        this.CompSeq = null;
+    }
 }

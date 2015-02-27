@@ -10,10 +10,8 @@ package readinput;
  * @author desktop
  */
 public class SeqPair {
-    private final SeqRead[] reads = new SeqRead[2];
+    public short checkSum;
+    public int seqInfo;
     
-    public SeqPair(SeqRead a, SeqRead b){
-        reads[0] = a;
-        reads[1] = b;
-    }
+    
 }

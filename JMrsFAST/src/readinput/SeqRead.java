@@ -20,7 +20,7 @@ public class SeqRead {
     private final String rName;
     private final String qual;
     // 0 = A, 1 = C, 2 = G, 3 = T, 4 = N
-    private final short[] baseCnt = new short[5];
+    private final byte[] baseCnt = new byte[5];
     
     public SeqRead(String seq, String rName, String qual){
         this.rName = rName;

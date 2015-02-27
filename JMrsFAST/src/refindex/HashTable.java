@@ -10,9 +10,11 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import readinput.CompressedSeq;
 import static refindex.HashUtils.byteArrayToInt;
 import static refindex.HashUtils.calculateCompressedLen;
@@ -37,6 +39,7 @@ public class HashTable {
     private final byte extraInfo;
     private final int windowSize;
     private final int checkSumLen;
+    private final int seqLen;
     private int refGenNamelen;
     private String refGenName;
     private int refGenOffset = 0;
@@ -45,12 +48,14 @@ public class HashTable {
     private List<GeneralIndex> refGenIdx;
     protected CompressedSeq cRefGen;
     protected final Map<Long, List<GeneralIndex>> HashTable = new ConcurrentHashMap<>();
+    protected AlphaCounter aCount;
     private int moreMaps = 0;
     
-    public HashTable(byte extraInfo, int windowSize, int checkSumLen){
+    public HashTable(byte extraInfo, int windowSize, int checkSumLen, int seqLen){
         this.extraInfo = extraInfo;
         this.windowSize = windowSize;
         this.checkSumLen = checkSumLen;
+        this.seqLen = seqLen;
     }
     
     public void generateHashFromBlock(byte[] block, int HashTbleMemSize, int IOBufferSize) throws Exception{
@@ -120,6 +125,24 @@ public class HashTable {
             List<GeneralIndex> value = s.getValue();
             Collections.sort(value, Collections.reverseOrder());
         });
+        
+        // Finally, q-gram counting
+        List<Future<byte[]>> holder = new ArrayList<>(threadCount);
+        jobRunner = Executors.newFixedThreadPool(threadCount);
+        for(i = 0; i < threadCount; i++){
+            holder.add(jobRunner.submit(new QGramCounter(i, threadCount, seqLen, compRefGenLen, cRefGen)));
+        }
+        
+        jobRunner.shutdown();
+        while(!jobRunner.isTerminated()){}
+        
+        List<byte[]> holderF = new ArrayList<>(threadCount);
+        for(Future<byte[]> h : holder){
+            holderF.add(h.get());
+        }
+        holder = null;
+        aCount = new AlphaCounter(holderF);
+        holderF = null;
     }
     
     protected class GenerateHashOnFly implements Runnable{
@@ -164,125 +187,138 @@ public class HashTable {
             // calculate refGen hashValues
             while (i++ < this.refGenLen ) // BORDER LINE CHECK
             {
-                    loc++;
-                    val = (cdata >> 60) & 7;
-                    if (++t == 21){
-                            t = 0;
-                            cRefGenIdx++;
-                            cdata = this.cRefGen.CompSeq.get(cRefGenIdx);
-                    }else{
-                            cdata <<= 3;
+                loc++;
+                val = (cdata >> 60) & 7;
+                if (++t == 21){
+                    t = 0;
+                    cRefGenIdx++;
+                    cdata = this.cRefGen.CompSeq.get(cRefGenIdx);
+                }else{
+                    cdata <<= 3;
+                }
+
+                if (val != 4 && stack == windowMaskSize){
+                    hv = ((hv << 2)|val)&windowMask;
+                    hvtemp = hv >> (checkSumLen << 1);
+
+                    if (hvtemp % this.maxThreads == this.threadid)
+                    {
+                        if(!hashIdxCount.containsKey(hvtemp))
+                            hashIdxCount.put(hvtemp, 0);
+
+                        int idx = hashIdxCount.get(hvtemp);
+                        this.HashTable.get(hvtemp).get(idx).info = loc;
+                        this.HashTable.get(hvtemp).get(idx).checksum = (short) (hv & checkSumMask);
+                        hashIdxCount.put(hvtemp, idx);
+                    }
+                }else{
+                    if (val == 4) // Value of the 'N' Nucleotide
+                    {
+                            stack = 1;
+                            hv = 0;
+                    }
+                    else
+                    {
+                            stack ++;
+                            hv = (hv <<2)|val;
                     }
 
-                    if (val != 4 && stack == windowMaskSize){
-                            hv = ((hv << 2)|val)&windowMask;
-                            hvtemp = hv >> (checkSumLen << 1);
-
-                            if (hvtemp % this.maxThreads == this.threadid)
-                            {
-                                if(!hashIdxCount.containsKey(hvtemp))
-                                    hashIdxCount.put(hvtemp, 0);
-                                
-                                int idx = hashIdxCount.get(hvtemp);
-                                this.HashTable.get(hvtemp).get(idx).info = loc;
-                                this.HashTable.get(hvtemp).get(idx).checksum = (short) (hv & checkSumMask);
-                                hashIdxCount.put(hvtemp, idx);
-                            }
-                    }else{
-                            if (val == 4) // Value of the 'N' Nucleotide
-                            {
-                                    stack = 1;
-                                    hv = 0;
-                            }
-                            else
-                            {
-                                    stack ++;
-                                    hv = (hv <<2)|val;
-                            }
-
-                    }
+                }
             }
 
         }
         
     }
     
-    protected class QGramCounter implements Runnable{
+    // The QGram data array is a series of 4 bytes per compressed location
+    // Byte order is:
+    //  A = 0
+    //  C = 1
+    //  G = 2
+    //  T = 3
+    //  N is ignored
+    protected class QGramCounter implements Callable<byte[]>{
         private final int threadid;
-        private final int threadCount;
         private final int seqLen;
-        private final int cRefGenLen;
+        private final int rgBlockStart;
+        private final int rgBlockLen;
+        private final int rgBlockIt;
+        private final CompressedSeq cRefGen;
+        private AlphaCounter aCount;
         
-	public QGramCounter(){
+        // The constructor calculates the portions of the compressed reference sequence to process in this thread
+	public QGramCounter(int threadid, int threadCount, int seqLen, int cRefGenLen, CompressedSeq cRefGen){
+            int rgBlockSize = cRefGenLen / threadCount;
+            rgBlockStart = (rgBlockSize * threadid * 21);
+            if (threadid == threadCount - 1)
+            {
+                rgBlockLen = cRefGenLen - threadid * rgBlockSize *21;
+                rgBlockIt = rgBlockLen;
+            }else{
+                rgBlockLen = rgBlockSize * 21;
+                rgBlockIt = rgBlockLen + seqLen - 1;
+            }
             
+            this.threadid = threadid;
+            this.seqLen = seqLen;
+            this.cRefGen = cRefGen;
         }
 
         @Override
-        public void run() {
-
-            CompressedSeq *cnext, cdata;
-            int i, t, val;
-
-            int rgBlockSize = _ih_crefGenLen / THREAD_COUNT;
-            int rgBlockStart = (rgBlockSize * id * 21);
-            int rgBlockLen = rgBlockSize * 21;
-            int rgBlockIt = rgBlockLen + SEQ_LENGTH - 1;
-            if (id == THREAD_COUNT - 1)
-            {
-                    rgBlockLen = _ih_refGenLen - id*rgBlockSize*21;
-                    rgBlockIt = rgBlockLen;
-            }
-
-            cnext = _ih_crefGen+(id*rgBlockSize);
-            cdata = *(cnext++);
+        public byte[] call() throws Exception {
+            int i, t, aCounter = 0, cSeqIdx = rgBlockStart;
+            long cdata, val;
+            
+            // assign memory to the counter class
+            aCount = new AlphaCounter(4 * rgBlockLen, threadid);
+            
+            cdata = cRefGen.CompSeq.get(cSeqIdx++);
             t = 0;
-            char outgoingChar[SEQ_LENGTH];
-            unsigned int *copy = (unsigned int *)(_ih_alphCnt+4*rgBlockStart);
-            unsigned char *cur = (unsigned char *)copy;		// current loc	// current loc
-            *copy = 0;
+            byte outgoingChar[] = new byte[seqLen];
 
-            for (i = 0; i < SEQ_LENGTH; i++)
-            {
+            for (i = 0; i < seqLen; i++){
                     val = (cdata >> 60) & 7;
-                    outgoingChar[i] = val;
+                    outgoingChar[i] = (byte) val;
 
-                    if (++t == 21)
-                    {
+                    if (++t == 21){
                             t = 0;
-                            cdata = *(cnext++);
-                    }
-                    else
-                    {
+                            cdata = cRefGen.CompSeq.get(cSeqIdx++);
+                    }else{
                             cdata <<= 3;
                     }
                     if (val != 4)
-                            (*(cur+val)) ++;
+                            aCount.increaseByte(aCounter, (byte) val);
             }
 
             int o = 0;
 
             while (i++ < rgBlockIt) // BORDER LINE CHECK
             {
-                    cur = (unsigned char *)++copy;
+                    ++aCounter;
                     val = (cdata >> 60) & 7;
-                    if (++t == 21)
-                    {
+                    if (++t == 21){
                             t = 0;
-                            cdata = *(cnext++);
-                    }
-                    else
-                    {
+                            cdata = cRefGen.CompSeq.get(cSeqIdx++);
+                    }else{
                             cdata <<= 3;
                     }
 
-                    *copy = *(copy-1);	// copies all 4 bytes at once
+                    aCount.copyByte(cSeqIdx);
                     if (val != 4)
-                            (*(cur + val)) ++;
+                            aCount.increaseByte(aCounter, (byte) val);
                     if (outgoingChar[o]!= 4)
-                            (*(cur + outgoingChar[o])) --;
-                    outgoingChar[o] = val;
-                    o = (++o == SEQ_LENGTH) ?0 :o;
+                        aCount.decreaseByte(aCounter, outgoingChar[o]);
+                    outgoingChar[o] = (byte) val;
+                    o = (++o == seqLen) ?0 :o;
             }
+            return aCount.counter;
         }
+    }
+    
+    public List<GeneralIndex> getCandidates(long hv){
+        if(this.HashTable.containsKey(hv))
+            return this.HashTable.get(hv);
+        else
+            return null; // returning null for no values within the hash table
     }
 }

@@ -86,7 +86,7 @@ public class HashTableFactory {
         }
     }
     
-    private HashTable LoadChrTable(String chr){
+    private HashTable LoadChrTable(String chr, int windowSize, int checksumLen, int seqLen){
         HashTable hash = null;
         try{
             if(!this.ChrInfo.containsKey(chr))
@@ -94,12 +94,14 @@ public class HashTableFactory {
             byte[] block = new byte[this.ChrInfo.get(chr)];
             
             reader.read(block);
-            hash  = new HashTable(block[0]);
+            hash  = new HashTable(block[0], windowSize, checksumLen, seqLen);
             
             hash.generateHashFromBlock(block, this.HashTbleMemSize, this.HashTbleIOBuffer);
         }catch(Exception ex){
             Logger.getLogger(HashTableFactory.class.getName()).log(Level.SEVERE, null, ex);
         }
+        
+        System.gc();
         return hash;
     }
     
