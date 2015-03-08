@@ -45,4 +45,8 @@ public class SeqRead {
     public void AddHit(CompressedHit h){
         this.hits.add(h);
     }
+    
+    public int GetBaseCnt(String c){
+        return (int) baseCnt[BaseToIndex(c.charAt(0))];
+    }
 }
