@@ -46,5 +46,5 @@ static void throwIOException(JNIEnv *env,const char* msg)
 // Defining native methods 
 /*********************************************************/
 
-// Checking hash table validitiy
-CAST_REF_OBJECT()
+// Loading mrsfast index
+CAST_REF_OBJECT(IHashTable*, MrsFastIndex, )
