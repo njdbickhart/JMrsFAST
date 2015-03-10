@@ -208,7 +208,7 @@ public class HashTable {
 
                         int idx = hashIdxCount.get(hvtemp);
                         this.HashTable.get(hvtemp).get(idx).info = loc;
-                        this.HashTable.get(hvtemp).get(idx).checksum = (short) (hv & checkSumMask);
+                        this.HashTable.get(hvtemp).get(idx).checksum = (int) (hv & checkSumMask);
                         hashIdxCount.put(hvtemp, idx);
                     }
                 }else{
@@ -315,6 +315,10 @@ public class HashTable {
         }
     }
     
+    
+    /*
+    Getters
+    */
     public List<GeneralIndex> getCandidates(long hv){
         if(this.HashTable.containsKey(hv))
             return this.HashTable.get(hv);

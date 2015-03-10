@@ -3,15 +3,14 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package readinput;
+package workers;
 
 /**
  *
- * @author desktop
+ * @author bickhart
  */
-public class SeqPair {
-    public int checkSum;
-    public int seqInfo;
-    
-    
+public class MapSingleRead {
+    public void MapSeqListBal(){
+        // This needs to be an implementation of the MapSeqListBal function in mrsfast.c
+    }
 }

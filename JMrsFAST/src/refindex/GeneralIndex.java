@@ -10,14 +10,17 @@ package refindex;
  * @author bickhart
  */
 public class GeneralIndex implements Comparable<GeneralIndex>{
-    public short checksum;
+    public int checksum;
     public int info;
     
+    public GeneralIndex(){
+        
+    }
     public GeneralIndex(int info){
         this.checksum = 0;
         this.info = info;
     }
-    public GeneralIndex(short checksum, int info){
+    public GeneralIndex(int checksum, int info){
         this.checksum = checksum;
         this.info = info;
     }

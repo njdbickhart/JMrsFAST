@@ -110,7 +110,6 @@ public class HashUtils {
             }
             return val;
     }
-
     
     public static int checkSumVal(char[] seq, int checkSumLength){
             int i=0;

@@ -40,7 +40,7 @@ public class TempHitOutput {
         }
     }
     
-    public void OutputTempHits(CompressedHit[] hits) throws IOException{
+    public synchronized void OutputTempHits(CompressedHit[] hits) throws IOException{
         RandomAccessFile out = null;
         RandomAccessFile out1 = new RandomAccessFile(tempFile1.toFile(), "w");
         RandomAccessFile out2 = new RandomAccessFile(tempFile2.toFile(), "w");

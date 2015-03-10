@@ -17,6 +17,7 @@ public class SeqRead {
     private final List<CompressedHit> hits = new ArrayList<>();
     public CompressedSeq compSeq;
     public CompressedSeq compRevSeq;
+    public final String seq;
     private final String rName;
     private final String qual;
     // 0 = A, 1 = C, 2 = G, 3 = T, 4 = N
@@ -25,6 +26,7 @@ public class SeqRead {
     public SeqRead(String seq, String rName, String qual){
         this.rName = rName;
         this.qual = qual;
+        this.seq = seq;
         CompressSeq(seq);
         BaseCount(seq);
     }

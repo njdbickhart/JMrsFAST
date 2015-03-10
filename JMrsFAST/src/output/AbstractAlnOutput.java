@@ -3,15 +3,15 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package readinput;
+package output;
 
 /**
  *
- * @author desktop
+ * @author bickhart
  */
-public class SeqPair {
-    public int checkSum;
-    public int seqInfo;
+public abstract class AbstractAlnOutput <T>{
     
+    public abstract void loadMapReads();
     
+    public abstract T getFormatOuput();
 }
