@@ -13,15 +13,17 @@ import readinput.CompressedSeq;
  * @author bickhart
  */
 public class WorkerUtils {
-    public static int[] countErrors(List<Long> refCompressedSeq, int refOff, CompressedSeq read, int seqOff, int len, int errorSamp, int allowedError){
-        int refALS = refOff * 3;
-	int segALS = seqOff * 3;
+    
+    // The first int returned is the error count. The second is the errorSamp (because Java does not allow two variable returns)
+    public static int[] countErrors(CompressedSeq ref, int refCurOff, CompressedSeq read, int readCurOff, int len, int errorSamp, int allowedError){
+        int refALS = refCurOff * 3;
+	int segALS = readCurOff * 3;
 
 
-	int refARS = typeSize - refALS;
-	int segARS = typeSize - segALS;	
+	int refARS = 63 - refALS;
+	int segARS = 63 - segALS;	
 
-	CompressedSeq tmpref, tmpseq, diff;
+	long tmpref, tmpseq, diff;
 	int err = 0;
 
 
