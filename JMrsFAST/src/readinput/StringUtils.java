@@ -12,11 +12,11 @@ package readinput;
 public class StringUtils {
     public static int BaseToIndex(char s){
         switch(s){
-            case 'A': return 0;
-            case 'C': return 1;
-            case 'G': return 2;
-            case 'T': return 3;
-            default: return 4;
+            case 'A': return 0; // 000
+            case 'C': return 1; // 001
+            case 'G': return 2; // 010
+            case 'T': return 3; // 011
+            default: return 4;  // 100
         }
     }
     

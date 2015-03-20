@@ -3,14 +3,14 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package jmrsfast;
+package datatypes;
 
 /**
  *
  * @author desktop
  */
-public class Constants {
-    public static final int MAPCHUNKS = 15;
-    public static enum MODE {PAIREDEND, SINGLEEND}; 
-    public static final long NMASK = 0x4924924924924924l;
+public class seqError {
+    public boolean isUsable = true; // boolean value set when error is greater than the allowed error threshold
+    public int error;
+    public int sampleError;
 }

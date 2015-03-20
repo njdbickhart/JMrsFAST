@@ -52,4 +52,26 @@ public class CompressedSeq {
         this.CompSeq.clear();
         this.CompSeq = null;
     }
+    
+    public long retrieveCSeqFromList(int seqLocation) throws Exception{
+        long current;
+        int cSeqALS = seqLocation * 3;
+        int cSeqARS = 63 - cSeqALS;
+        if(seqLocation < 0)
+            throw new Exception("[COMPSEQ] ERROR! Sequence location less than zero!");
+        
+        if(seqLocation % 64 != 0){  
+            // The location on the sequence is NOT a multiple of 64, so we need to offset longs from the list
+            int idx1 = Math.floorDiv(seqLocation, 64);
+            int idx2 = idx1 + 1;
+            
+            if(idx2 > this.CompSeq.size())
+                throw new Exception("[COMPSEQ] ERROR! second index overrun!");
+            
+            current = (this.CompSeq.get(idx1) << cSeqALS) | (this.CompSeq.get(idx2) >> cSeqARS);
+        }else{
+            current = this.CompSeq.get(seqLocation / 64);
+        }
+        return current;
+    }
 }
