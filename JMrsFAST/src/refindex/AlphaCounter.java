@@ -5,6 +5,7 @@
  */
 package refindex;
 
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -58,5 +59,12 @@ public class AlphaCounter {
     public void decreaseByte(int counterIdx, byte val){
         int actualPos = (counterIdx * 4) + (int) val;
         this.counter[actualPos] -= 1;
+    }
+    
+    public byte[] getCounterAtLoc(int counterIdx){
+        byte[] count = new byte[4];
+        int actualPos = (counterIdx * 4);
+        count = Arrays.copyOfRange(this.counter, actualPos, actualPos + 4);
+        return count;
     }
 }

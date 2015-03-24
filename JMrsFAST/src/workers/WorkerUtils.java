@@ -6,6 +6,7 @@
 package workers;
 
 import datatypes.seqError;
+import datatypes.seqMD;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -18,7 +19,92 @@ import readinput.CompressedSeq;
 public class WorkerUtils {
     private static final Logger log = Logger.getLogger(WorkerUtils.class.getName());
     
-    // The first int returned is the error count. The second is the errorSamp (because Java does not allow two variable returns)
+    public static seqMD getMDValue(CompressedSeq ref, int refGenLoc, CompressedSeq read, int readLen, int err){
+        seqMD mdtags = new seqMD();
+        int mod = refGenLoc % 21;
+        long diff, diffMask = 7l;
+        int shifts = (20 - mod) * 3;        
+        
+        if(err > 0 || err == -1){
+            for(int i = 0; i < readLen; i++){
+                // From MrsFAST.c 
+                if (diffMask == 7)
+                    {
+                            diffMask = 0x7000000000000000;
+                            tmpref = (*ref << refALS) | (*(1+ref) >> refARS);
+                            ref++;
+                            diff = (tmpref ^ *(cmpSeq++));
+                    }
+                    else
+                            diffMask >>= 3;
+
+                    if (diff & diffMask)		// ref[index + i - 1 ] != ver[i]
+                    {
+                            err++;
+                            if (matchCnt)
+                            {
+                                    if (matchCnt < 10)
+                                    {
+                                            op[pp++]=_msf_numbers[matchCnt][0];
+                                    }
+                                    else if (matchCnt < 100)
+                                    {
+                                            op[pp++]=_msf_numbers[matchCnt][0];
+                                            op[pp++]=_msf_numbers[matchCnt][1];
+                                    }
+                                    else
+                                    {
+                                            op[pp++]=_msf_numbers[matchCnt][0];
+                                            op[pp++]=_msf_numbers[matchCnt][1];
+                                            op[pp++]=_msf_numbers[matchCnt][2];
+                                    }
+
+                                    matchCnt = 0;
+                            }
+                            op[pp++] = alphabet[ (*refPos >> shifts) & 7 ];
+                    }
+                    else
+                    {
+                            matchCnt++;
+                    }
+
+                    if (shifts == 0)
+                    {
+                            refPos++;
+                            shifts = 60;
+                    }
+                    else
+                            shifts -= 3;
+            }
+        }else if (err == 0)
+	{
+		matchCnt = SEQ_LENGTH;
+	}
+
+	if (matchCnt>0)
+	{
+		if (matchCnt < 10)
+		{
+			op[pp++]=_msf_numbers[matchCnt][0];
+		}
+		else if (matchCnt < 100)
+		{
+			op[pp++]=_msf_numbers[matchCnt][0];
+			op[pp++]=_msf_numbers[matchCnt][1];
+		}
+		else
+		{
+			op[pp++]=_msf_numbers[matchCnt][0];
+			op[pp++]=_msf_numbers[matchCnt][1];
+			op[pp++]=_msf_numbers[matchCnt][2];
+		}
+	}
+	op[pp]='\0';
+        
+        return mdtags;
+    }
+    
+    // I created a separate class to carry both int values to the calling class
     public static seqError countErrors(CompressedSeq ref, int refGenLoc, CompressedSeq read, int readCurLoc, int len, int allowedError, byte[] errorCounter){
         long tmpref = 0, tmpseq = 0, diff;
 	int err = 0, errSamp = 0;
