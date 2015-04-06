@@ -7,7 +7,6 @@ package workers;
 
 import datatypes.seqError;
 import datatypes.seqMD;
-import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import jmrsfast.Constants;
@@ -74,6 +73,7 @@ public class WorkerUtils {
             }
         }else if (err == 0){
 		matchCnt = readLen;
+                mdtags.isUseable = false;
 	}
 
 	if (matchCnt>0){

@@ -7,12 +7,11 @@ package workers;
 
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import output.AbstractAlnOutput;
 import readinput.SeqReadFactory;
-import readinput.TempHitOutput;
+import output.TempHitOutput;
+import output.TempMaxHitOutput;
 import refindex.GeneralIndex;
 import refindex.HashTable;
 
@@ -25,10 +24,10 @@ public class allHitsMapper {
     private final int maxHits;
     private final HashTable refHash;
     private final SeqReadFactory reads;
-    private final TempHitOutput tempFile;
+    private final TempMaxHitOutput tempFile;
     private ExecutorService executor;
     
-    public allHitsMapper(HashTable refHash, SeqReadFactory reads, int threads, int maxHits, TempHitOutput tempFile){
+    public allHitsMapper(HashTable refHash, SeqReadFactory reads, int threads, int maxHits, TempMaxHitOutput tempFile){
         this.threads = threads;
         this.maxHits = maxHits;
         this.refHash = refHash;
@@ -54,7 +53,7 @@ public class allHitsMapper {
     
     private class MapQueue implements Runnable{
         
-        public MapQueue(List<GeneralIndex> refLocs, List<GeneralIndex> readLocs, TempHitOutput tempFile){
+        public MapQueue(List<GeneralIndex> refLocs, List<GeneralIndex> readLocs, TempMaxHitOutput tempFile){
             // this needs to be an implementation of the MaqSeq funciton in mrsfast.c
         }
 
