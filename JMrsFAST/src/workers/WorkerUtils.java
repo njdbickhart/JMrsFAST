@@ -10,6 +10,7 @@ import datatypes.seqMD;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import jmrsfast.Constants;
 import readinput.CompressedSeq;
 
 /**
@@ -21,85 +22,64 @@ public class WorkerUtils {
     
     public static seqMD getMDValue(CompressedSeq ref, int refGenLoc, CompressedSeq read, int readLen, int err){
         seqMD mdtags = new seqMD();
-        int mod = refGenLoc % 21;
-        long diff, diffMask = 7l;
+        int mod = refGenLoc % 21, readCurLoc = 0, matchCnt = 0, tmpGenLoc = refGenLoc;
+        long tmpref = 0, tmpseq = 0, diff = 0, diffMask = 7l, startRef = 0;
         int shifts = (20 - mod) * 3;        
+        
+        try{
+            startRef = ref.retrieveCSeqFromList(refGenLoc);
+        }catch(Exception ex){
+            log.log(Level.SEVERE, "[GETMDVALUE] Error getting first reference seq!", ex);
+        }
         
         if(err > 0 || err == -1){
             for(int i = 0; i < readLen; i++){
                 // From MrsFAST.c 
-                if (diffMask == 7)
-                    {
-                            diffMask = 0x7000000000000000;
-                            tmpref = (*ref << refALS) | (*(1+ref) >> refARS);
-                            ref++;
-                            diff = (tmpref ^ *(cmpSeq++));
+                if (diffMask == 7){
+                    diffMask = 0x7000000000000000l;
+                    try{
+                        tmpref = ref.retrieveCSeqFromList(tmpGenLoc);
+                        tmpseq = read.retrieveCSeqFromList(readCurLoc);
+                        tmpGenLoc += 21;
+                        readCurLoc += 21;
+                    }catch(Exception ex){
+                        log.log(Level.SEVERE, "[GETMDVALUE] Error retrieving sequence from cSEQ!", ex);
                     }
-                    else
-                            diffMask >>= 3;
+                    diff = (tmpref ^ tmpseq);
+                }else
+                    diffMask >>= 3;
+                
+                // If there are some bits that remain, there's an error!
+                if ((diff & diffMask) >= 1){
+                    err++;
+                    char b = Constants.alphabet[(int)(startRef >> shifts) & 7 ];
+                    if (matchCnt >= 1){
+                        mdtags.loadMDTag(matchCnt, b);
+                    }
+                    mdtags.loadMDTag(b);
+                }else{
+                    matchCnt++;
+                }
 
-                    if (diff & diffMask)		// ref[index + i - 1 ] != ver[i]
-                    {
-                            err++;
-                            if (matchCnt)
-                            {
-                                    if (matchCnt < 10)
-                                    {
-                                            op[pp++]=_msf_numbers[matchCnt][0];
-                                    }
-                                    else if (matchCnt < 100)
-                                    {
-                                            op[pp++]=_msf_numbers[matchCnt][0];
-                                            op[pp++]=_msf_numbers[matchCnt][1];
-                                    }
-                                    else
-                                    {
-                                            op[pp++]=_msf_numbers[matchCnt][0];
-                                            op[pp++]=_msf_numbers[matchCnt][1];
-                                            op[pp++]=_msf_numbers[matchCnt][2];
-                                    }
-
-                                    matchCnt = 0;
-                            }
-                            op[pp++] = alphabet[ (*refPos >> shifts) & 7 ];
+                if (shifts == 0){
+                    refGenLoc += 21;
+                    try {
+                        startRef = ref.retrieveCSeqFromList(refGenLoc);
+                    } catch (Exception ex) {
+                        log.log(Level.SEVERE, "[GETMDVALUE] Error getting second reference seq!", ex);
                     }
-                    else
-                    {
-                            matchCnt++;
-                    }
-
-                    if (shifts == 0)
-                    {
-                            refPos++;
-                            shifts = 60;
-                    }
-                    else
-                            shifts -= 3;
+                    shifts = 60;
+                }else
+                    shifts -= 3;
             }
-        }else if (err == 0)
-	{
-		matchCnt = SEQ_LENGTH;
+        }else if (err == 0){
+		matchCnt = readLen;
 	}
 
-	if (matchCnt>0)
-	{
-		if (matchCnt < 10)
-		{
-			op[pp++]=_msf_numbers[matchCnt][0];
-		}
-		else if (matchCnt < 100)
-		{
-			op[pp++]=_msf_numbers[matchCnt][0];
-			op[pp++]=_msf_numbers[matchCnt][1];
-		}
-		else
-		{
-			op[pp++]=_msf_numbers[matchCnt][0];
-			op[pp++]=_msf_numbers[matchCnt][1];
-			op[pp++]=_msf_numbers[matchCnt][2];
-		}
+	if (matchCnt>0){
+            // No errors, or the remaining matchcount variable after the loop
+            mdtags.loadMDTag(matchCnt);
 	}
-	op[pp]='\0';
         
         return mdtags;
     }

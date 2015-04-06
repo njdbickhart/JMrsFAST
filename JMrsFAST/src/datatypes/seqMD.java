@@ -17,7 +17,22 @@ public class seqMD {
     public List<MDTag> tags = new ArrayList<>(1);
     
     public void loadMDTag(int count, char symbol){
-        tags.add(new MDTag(count, symbol));
+        MDTag temp = new MDTag();
+        temp.addCount(count);
+        temp.addSymbol(symbol);
+        tags.add(temp);
+    }
+    
+    public void loadMDTag(char symbol){
+        MDTag temp = new MDTag();
+        temp.addSymbol(symbol);
+        tags.add(temp);
+    }
+    
+    public void loadMDTag(int count){
+        MDTag temp = new MDTag();
+        temp.addCount(count);
+        tags.add(temp);
     }
     
     public String getFullMDStr(){
@@ -28,16 +43,24 @@ public class seqMD {
     }
     
     public class MDTag{
-        public int count;
-        public char symbol;
+        public int count = -1;
+        public char symbol = 'Q';
         
-        public MDTag(int count, char symbol){
+        public void addCount(int count){
             this.count = count;
+        }
+        
+        public void addSymbol(char symbol){
             this.symbol = symbol;
         }
         
         public String getString(){
-            return String.valueOf(count) + String.valueOf(symbol);
+            String value = null;
+            if(count != -1)
+                value += String.valueOf(count);
+            if(symbol != 'Q')
+                value += String.valueOf(symbol);
+            return value;
         }
     }
 }

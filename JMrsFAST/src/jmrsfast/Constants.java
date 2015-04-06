@@ -13,4 +13,5 @@ public class Constants {
     public static final int MAPCHUNKS = 15;
     public static enum MODE {PAIREDEND, SINGLEEND}; 
     public static final long NMASK = 0x4924924924924924l;
+    public static final char[] alphabet = new char[]{'A', 'C', 'G', 'T', 'N'};
 }
