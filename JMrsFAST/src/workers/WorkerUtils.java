@@ -80,7 +80,7 @@ public class WorkerUtils {
             // No errors, or the remaining matchcount variable after the loop
             mdtags.loadMDTag(matchCnt);
 	}
-        
+        mdtags.mdErr = err;
         return mdtags;
     }
     

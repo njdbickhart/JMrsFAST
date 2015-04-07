@@ -21,8 +21,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import jmrsfast.Constants.MODE;
 import refindex.GeneralIndex;
 import refindex.HashUtils;

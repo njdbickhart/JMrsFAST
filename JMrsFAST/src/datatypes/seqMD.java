@@ -15,6 +15,7 @@ import java.util.List;
 public class seqMD {
     public boolean isUseable = true;
     public List<MDTag> tags = new ArrayList<>(1);
+    public int mdErr = 0;
     
     public void loadMDTag(int count, char symbol){
         MDTag temp = new MDTag();
