@@ -325,4 +325,8 @@ public class HashTable {
         else
             return null; // returning null for no values within the hash table
     }
+    
+    public CompressedSeq getCRefGenSeq(){
+        return this.cRefGen;
+    }
 }

@@ -255,6 +255,10 @@ public class SeqReadFactory {
             return null;
     }
     
+    public List<SeqRead> getReadInfoList(){
+        return this.readChunk;
+    }
+    
     public Set<Long> getHashKeys(){
         return this.HashTable.keySet();
     }
