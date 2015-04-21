@@ -5,6 +5,7 @@
  */
 package workers;
 
+import datatypes.SamplingLocs;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
@@ -28,13 +29,15 @@ public class allHitsMapper {
     private final SeqReadFactory reads;
     private final TempMaxHitOutput tempFile;
     private ExecutorService executor;
+    private final SamplingLocs slocs;
     
-    public allHitsMapper(HashTable refHash, SeqReadFactory reads, int threads, int maxHits, TempMaxHitOutput tempFile){
+    public allHitsMapper(HashTable refHash, SeqReadFactory reads, int threads, int maxHits, TempMaxHitOutput tempFile, SamplingLocs slocs){
         this.threads = threads;
         this.maxHits = maxHits;
         this.refHash = refHash;
         this.reads = reads;
         this.tempFile = tempFile;
+        this.slocs = slocs;
         this.executor = Executors.newFixedThreadPool(threads);
     }
     
@@ -46,7 +49,7 @@ public class allHitsMapper {
             
             // If there is a corresponding hash in the reference genome!
             if(refList != null){
-                executor.submit(new MapQueue(readList, refList, reads.getReadInfoList(), refHash.getCRefGenSeq(), tempFile));
+                executor.submit(new MapQueue(readList, refList, reads.getReadInfoList(), refHash.getCRefGenSeq(), tempFile, slocs));
             }else{  // Print this out as a "null" hit for retrieval later
                 
             }
@@ -59,14 +62,16 @@ public class allHitsMapper {
         private final TempMaxHitOutput tempFile;
         private final List<SeqRead> readChunk;
         private final CompressedSeq cRefGen;
+        private final SamplingLocs slocs;
         
-        public MapQueue(List<GeneralIndex> refLocs, List<GeneralIndex> readLocs, List<SeqRead> readChunk, CompressedSeq cRefGen, TempMaxHitOutput tempFile){
+        public MapQueue(List<GeneralIndex> refLocs, List<GeneralIndex> readLocs, List<SeqRead> readChunk, CompressedSeq cRefGen, TempMaxHitOutput tempFile, SamplingLocs slocs){
             // this needs to be an implementation of the MaqSeq funciton in mrsfast.c
             this.refLocs = refLocs;
             this.readLocs = readLocs;
             this.tempFile = tempFile;
             this.readChunk = readChunk;
             this.cRefGen = cRefGen;
+            this.slocs = slocs;
         }
 
         @Override
@@ -115,35 +120,32 @@ public class allHitsMapper {
             {
                     int j = 0;
                     int z = 0;
-                    GeneralIndex *genInfo;
-                    GeneralIndex *seqInfo;
-                    CompressedSeq *_tmpCmpSeq;
-                    unsigned char tmp[4];
+                    int genInfo;
+                    int seqInfo;
+                    CompressedSeq _tmpCmpSeq;
+                    char tmp[];
                     unsigned char *alph, *gl;
                     char rqual[QUAL_LENGTH];
                     rqual[QUAL_LENGTH] = '\0';
                     char *_tmpQual, *_tmpSeq;
 
-                    if (dir > 0)
-                    {
-                            genInfo		= l1;
-                            seqInfo		= l2;
-                    }
-                    else
-                    {
-                            genInfo		= l2;
-                            seqInfo		= l1;
+                    if (direction > 0){
+                            genInfo		= refLocIdx;
+                            seqInfo		= readLocIdx;
+                    }else{
+                            genInfo		= readLocIdx;
+                            seqInfo		= refLocIdx;
                     }
 
 
                     for (j=0; j<readSampLocSize; j++)
                     {
-                            int re = _msf_samplingLocsSize * 2;
+                            int re = slocs.samplingLocsSize * 2;
                             int r = seqInfo[j].info / re;
 
                             int x = seqInfo[j].info % re;
-                            int o = x % _msf_samplingLocsSize;
-                            char d = (x/_msf_samplingLocsSize)?1:0;
+                            int o = x % slocs.samplingLocsSize;
+                            char d = (x/slocs.samplingLocsSize)?1:0;
 
                             if (_msf_seqList[r].hits[0] > maxHits)
                                     continue;
@@ -226,12 +228,12 @@ public class allHitsMapper {
             {
                     int tmp1=refSampLocSize/2, tmp2= readSampLocSize/2;
                     if (tmp1 != 0)
-                            mapSeqListBal(l1, tmp1, l2+tmp2, readSampLocSize-tmp2, dir, id);
-                    mapSeqListBal(l2+tmp2, readSampLocSize-tmp2, l1+tmp1, refSampLocSize-tmp1, -dir, id);
+                            mapSeqListBal(refLocIdx, tmp1, readLocIdx+tmp2, readSampLocSize-tmp2, direction);
+                    mapSeqListBal(readLocIdx+tmp2, readSampLocSize-tmp2, refLocIdx+tmp1, refSampLocSize-tmp1, -direction);
                     if (tmp2 !=0)
-                            mapSeqListBal(l1+tmp1, refSampLocSize-tmp1, l2, tmp2, dir, id);
+                            mapSeqListBal(refLocIdx+tmp1, refSampLocSize-tmp1, readLocIdx, tmp2, direction);
                     if (tmp1 + tmp2 != 0)
-                            mapSeqListBal(l2, tmp2, l1, tmp1, -dir, id);
+                            mapSeqListBal(readLocIdx, tmp2, refLocIdx, tmp1, -direction);
             }
         }
         
