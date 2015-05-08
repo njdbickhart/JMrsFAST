@@ -13,4 +13,9 @@ public class seqError {
     public boolean isUsable = true; // boolean value set when error is greater than the allowed error threshold
     public int error;
     public int sampleError;
+    
+    public void combine(seqError err){
+        this.error += err.error;
+        this.sampleError += err.sampleError;
+    }
 }

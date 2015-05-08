@@ -80,7 +80,9 @@ public class TempMaxHitOutput {
     public AbstractTempHit ReadMaxHit() throws IOException{
         AbstractTempHit line = null;
         byte[] temp = new byte[4];
-        out.read(temp);
+        int teller = out.read(temp);
+        if(teller == -1)
+            return line;
         
         int index = HashUtils.byteArrayToInt(temp);
         if(index == 0){

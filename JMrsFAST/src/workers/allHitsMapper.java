@@ -6,11 +6,15 @@
 package workers;
 
 import datatypes.SamplingLocs;
+import datatypes.seqMD;
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import readinput.SeqReadFactory;
 import output.TempHitOutput;
 import output.TempMaxHitOutput;
@@ -86,7 +90,7 @@ public class allHitsMapper {
 
         @Override
         public void run() {
-            GeneralIndex SeqInfo = this.readLocs.get(0);
+            //GeneralIndex SeqInfo = this.readLocs.get(0);
             int rb = 0, re = 1, sb = 0, se = 1;
             int rs = this.readLocs.get(0).info;
             int ss = this.refLocs.get(0).info;
@@ -191,42 +195,33 @@ public class allHitsMapper {
                                             + Math.abs(refGenAlph[1]-readAlph[1]) 
                                             + Math.abs(refGenAlph[2]-readAlph[2]) 
                                             + Math.abs(refGenAlph[3]-readAlph[3]) <= this.maxDist)
-                                            err = verifySeq(genLoc, _tmpCmpSeq, o, id);
+                                            err = WorkerUtils.verifySeq(genLoc, this.cRefGen, 0, _tmpCmpSeq, o, this.slocs);
 
-                                    if (err != -1)
-                                    {
-                                            unsigned char mderr = calculateMD(genLoc, _tmpCmpSeq, _tmpSeq, _tmpQual, err, &_msf_op[id]);
-                                            unsigned char mdlen = strlen(_msf_op[id]);
-                                            if (mderr < 0)
-                                                    continue;
+                                    if (err != -1){
+                                        seqMD mderr = WorkerUtils.getMDValue(this.cRefGen, genLoc, _tmpCmpSeq, slocs.seqLen, err);
+                                        
+                                        if (!mderr.isUseable)
+                                                continue;
 
-                                            _msf_mappingCnt[id]++;
-                                            _msf_seqList[r].hits[0]++;
+                                        this.readChunk.get(r).hits++;
 
-                                            if (_msf_seqList[r].hits[0] == 1)
-                                                    _msf_mappedSeqCnt[id]++;
+                                        //if (_msf_seqList[r].hits[0] == 1)
+                                                //_msf_mappedSeqCnt[id]++;
 
-                                            if (_msf_seqList[r].hits[0] > maxHits)
-                                            {
-                                                    _msf_mappedSeqCnt[id]--;
-                                                    _msf_mappingCnt[id] -= (maxHits+1);
-                                                    break;
-                                            }
+                                        if (this.readChunk.get(r).hits > maxHits){
+                                                //_msf_mappedSeqCnt[id]--;
+                                                //_msf_mappingCnt[id] -= (maxHits+1);
+                                                break;
+                                        }
 
-                                            int tmpOut;
-                                            int flag = 16 * d;
-                                            int loc = genLoc + _msf_refGenOffset;
+                                        int flag = 16 * d;
+                                        int loc = genLoc + this.refGenOffset;
 
-                                            pthread_mutex_lock(&_msf_writeLock);
-                                            tmpOut = fwrite(&r, sizeof(int), 1, _msf_hitsTempFile);
-                                            tmpOut = fwrite(&flag, sizeof(int), 1, _msf_hitsTempFile);
-                                            tmpOut = fwrite(&loc, sizeof(int), 1, _msf_hitsTempFile);
-                                            if (SNPMode)
-                                                    tmpOut = fwrite(&err, sizeof(char), 1, _msf_hitsTempFile);
-                                            tmpOut = fwrite(&mderr, sizeof(char), 1, _msf_hitsTempFile);
-                                            tmpOut = fwrite(&mdlen, sizeof(char), 1, _msf_hitsTempFile);
-                                            tmpOut = fwrite(_msf_op[id], sizeof(char), mdlen, _msf_hitsTempFile);
-                                            pthread_mutex_unlock(&_msf_writeLock);
+                                        try {
+                                            this.tempFile.WriteMaxHit(r, flag, loc, mderr);
+                                        } catch (IOException ex) {
+                                            Logger.getLogger(allHitsMapper.class.getName()).log(Level.SEVERE, null, ex);
+                                        }
                                     }
 
                             }

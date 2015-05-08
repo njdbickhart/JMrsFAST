@@ -165,12 +165,11 @@ public class WorkerUtils {
     }
     
     public static int verifySeq(int refCurLoc, CompressedSeq RefSeq, int readCurLoc, CompressedSeq ReadSeq, int offset, SamplingLocs slocs){
-        int segLen, cmpSegLen, curOff, sampleErrors=0, refLoc, segLoc;
-        seqError error;
+        int curOff;
+        seqError err;
 	refCurLoc--;
 	int refOff = refCurLoc % 21;
 
-	CompressedSeq *refCurSeg = refSeg+_msf_samplingLocsSeg[offset];
 
 	int refCurOff=refOff + slocs.samplingLocsOffset[offset];
 	if (refCurOff>=21){
@@ -178,45 +177,42 @@ public class WorkerUtils {
 		refCurOff-=21;
 	}
         // countErrors(CompressedSeq ref, int refGenLoc, CompressedSeq read, int readCurLoc, int len, int allowedError, byte[] errorCounter)
-	err = countErrors(RefSeq, refCurLoc, ReadSeq, _msf_samplingLocsOffset[offset], _msf_samplingLocsLen[offset], &sampleErrors, errThreshold);	// segment corresponding to this offset
-	if (sampleErrors || err)
+	err = countErrors(RefSeq, refCurLoc, ReadSeq, readCurLoc + slocs.samplingLocsOffset[offset], slocs.samplingLocsLen[offset], slocs.errThreshold, slocs.errorCount);	// segment corresponding to this offset
+	if (err.sampleError > 0 || err.error > 0)
 		return -1;
 	
 //	_msf_verificationCnt[id]++;
 //	err = 0; 
 
-	for (curOff = 0; curOff < offset; curOff++)
-	{
-		sampleErrors=0;
+	for (curOff = 0; curOff < offset; curOff++){
 
-		refCurSeg = refSeg+_msf_samplingLocsSeg[curOff];
-		refCurOff = refOff+_msf_samplingLocsOffset[curOff];
-		if(refCurOff>=21)
-		{
-			refCurSeg++;
+		refCurOff = refOff + slocs.samplingLocsOffset[offset];
+		if(refCurOff>=21){
+			refCurLoc += 21;
 			refCurOff-=21;
 		}
-
-		err += countErrors(refCurSeg, refCurOff, ReadSeq+_msf_samplingLocsSeg[curOff], _msf_samplingLocsOffset[curOff], _msf_samplingLocsLen[curOff], &sampleErrors, errThreshold-err);	// for all segments before offset
-		if (err > errThreshold || sampleErrors==0)
+                seqError tmp; 
+		tmp = countErrors(RefSeq, refCurLoc, ReadSeq, readCurLoc + slocs.samplingLocsOffset[curOff], slocs.samplingLocsLen[curOff], slocs.errThreshold, slocs.errorCount);	// for all segments before offset
+                err.combine(tmp);
+                
+		if (err.error > slocs.errThreshold || err.sampleError == 0)
 			return -1;
 	}
 
-	if (offset != _msf_samplingLocsSize-1)
-	{
+	if (offset != slocs.samplingLocsSize - 1){
 		offset++;
-		refCurSeg = refSeg+_msf_samplingLocsSeg[offset];
-		refCurOff = refOff+_msf_samplingLocsOffset[offset];
-		if(refCurOff>=21)
-		{
-			refCurSeg++;
+		refCurOff = refOff + slocs.samplingLocsOffset[offset];
+		if(refCurOff>=21){
+			refCurLoc += 21;
 			refCurOff-=21;
 		}
-		err += countErrors(refCurSeg, refCurOff, ReadSeq+_msf_samplingLocsSeg[offset], _msf_samplingLocsOffset[offset], _msf_samplingLocsLenFull[offset], &sampleErrors, errThreshold-err);	// this offset to the end
+		seqError tmp; 
+		tmp = countErrors(RefSeq, refCurLoc, ReadSeq, readCurLoc + slocs.samplingLocsOffset[offset], slocs.samplingLocsLen[offset], slocs.errThreshold, slocs.errorCount);	// for all segments before offset
+                err.combine(tmp);	// this offset to the end
 	}
 
-	if (err > errThreshold)
+	if (err.error > slocs.errThreshold)
 		return -1;
-	return err;
+	return err.error;
     }
 }
