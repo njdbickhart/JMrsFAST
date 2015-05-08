@@ -5,6 +5,7 @@
  */
 package workers;
 
+import datatypes.SamplingLocs;
 import datatypes.seqError;
 import datatypes.seqMD;
 import java.util.logging.Level;
@@ -161,5 +162,61 @@ public class WorkerUtils {
             }
         }
         return errorCounter;
+    }
+    
+    public static int verifySeq(int refCurLoc, CompressedSeq RefSeq, int readCurLoc, CompressedSeq ReadSeq, int offset, SamplingLocs slocs){
+        int segLen, cmpSegLen, curOff, sampleErrors=0, refLoc, segLoc;
+        seqError error;
+	refCurLoc--;
+	int refOff = refCurLoc % 21;
+
+	CompressedSeq *refCurSeg = refSeg+_msf_samplingLocsSeg[offset];
+
+	int refCurOff=refOff + slocs.samplingLocsOffset[offset];
+	if (refCurOff>=21){
+		refCurLoc += 21;
+		refCurOff-=21;
+	}
+        // countErrors(CompressedSeq ref, int refGenLoc, CompressedSeq read, int readCurLoc, int len, int allowedError, byte[] errorCounter)
+	err = countErrors(RefSeq, refCurLoc, ReadSeq, _msf_samplingLocsOffset[offset], _msf_samplingLocsLen[offset], &sampleErrors, errThreshold);	// segment corresponding to this offset
+	if (sampleErrors || err)
+		return -1;
+	
+//	_msf_verificationCnt[id]++;
+//	err = 0; 
+
+	for (curOff = 0; curOff < offset; curOff++)
+	{
+		sampleErrors=0;
+
+		refCurSeg = refSeg+_msf_samplingLocsSeg[curOff];
+		refCurOff = refOff+_msf_samplingLocsOffset[curOff];
+		if(refCurOff>=21)
+		{
+			refCurSeg++;
+			refCurOff-=21;
+		}
+
+		err += countErrors(refCurSeg, refCurOff, ReadSeq+_msf_samplingLocsSeg[curOff], _msf_samplingLocsOffset[curOff], _msf_samplingLocsLen[curOff], &sampleErrors, errThreshold-err);	// for all segments before offset
+		if (err > errThreshold || sampleErrors==0)
+			return -1;
+	}
+
+	if (offset != _msf_samplingLocsSize-1)
+	{
+		offset++;
+		refCurSeg = refSeg+_msf_samplingLocsSeg[offset];
+		refCurOff = refOff+_msf_samplingLocsOffset[offset];
+		if(refCurOff>=21)
+		{
+			refCurSeg++;
+			refCurOff-=21;
+		}
+		err += countErrors(refCurSeg, refCurOff, ReadSeq+_msf_samplingLocsSeg[offset], _msf_samplingLocsOffset[offset], _msf_samplingLocsLenFull[offset], &sampleErrors, errThreshold-err);	// this offset to the end
+	}
+
+	if (err > errThreshold)
+		return -1;
+	return err;
     }
 }

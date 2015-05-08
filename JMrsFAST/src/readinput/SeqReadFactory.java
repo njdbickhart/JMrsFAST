@@ -23,6 +23,7 @@ import java.util.concurrent.Future;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import jmrsfast.Constants.MODE;
+import jmrsfast.ErrorSamples;
 import refindex.GeneralIndex;
 import refindex.HashUtils;
 
@@ -46,11 +47,11 @@ public class SeqReadFactory {
     
     private final Logger log = Logger.getLogger(SeqReadFactory.class.getName());
     
-    public SeqReadFactory(MODE mode, int bufferSize, int threadCount, int errThreshold, int windowSize, int checkSumLen, int seqLen){
+    public SeqReadFactory(MODE mode, int bufferSize, int threadCount, int errThreshold, int windowSize, int checkSumLen, int seqLen, ErrorSamples errors){
         this.mode = mode;
         this.bufferSize = bufferSize;
         this.threadCount = threadCount;
-        this.sLocs = new SamplingLocs(errThreshold, windowSize, seqLen);
+        this.sLocs = new SamplingLocs(errThreshold, windowSize, seqLen, errors);
         this.errThreshold = errThreshold;
         this.windowSize = windowSize;
         this.checkSumLen = checkSumLen;

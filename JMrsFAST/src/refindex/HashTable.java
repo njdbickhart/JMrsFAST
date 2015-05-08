@@ -15,6 +15,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import readinput.CompressedSeq;
 import static refindex.HashUtils.byteArrayToInt;
 import static refindex.HashUtils.calculateCompressedLen;
@@ -42,13 +43,13 @@ public class HashTable {
     private final int seqLen;
     private int refGenNamelen;
     private String refGenName;
-    private int refGenOffset = 0;
-    private int refGenLength = 0;
+    public int refGenOffset = 0;
+    public int refGenLength = 0;
     private int compRefGenLen = 0;
     private List<GeneralIndex> refGenIdx;
     protected CompressedSeq cRefGen;
     protected final Map<Long, List<GeneralIndex>> HashTable = new ConcurrentHashMap<>();
-    protected AlphaCounter aCount;
+    public AlphaCounter aCount;
     private int moreMaps = 0;
     
     public HashTable(byte extraInfo, int windowSize, int checkSumLen, int seqLen){
@@ -134,7 +135,8 @@ public class HashTable {
         }
         
         jobRunner.shutdown();
-        while(!jobRunner.isTerminated()){}
+        jobRunner.awaitTermination(1l, TimeUnit.DAYS);
+        //while(!jobRunner.isTerminated()){}
         
         List<byte[]> holderF = new ArrayList<>(threadCount);
         for(Future<byte[]> h : holder){

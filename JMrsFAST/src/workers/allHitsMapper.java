@@ -6,6 +6,7 @@
 package workers;
 
 import datatypes.SamplingLocs;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
@@ -15,6 +16,7 @@ import output.TempHitOutput;
 import output.TempMaxHitOutput;
 import readinput.CompressedSeq;
 import readinput.SeqRead;
+import refindex.AlphaCounter;
 import refindex.GeneralIndex;
 import refindex.HashTable;
 
@@ -49,7 +51,7 @@ public class allHitsMapper {
             
             // If there is a corresponding hash in the reference genome!
             if(refList != null){
-                executor.submit(new MapQueue(readList, refList, reads.getReadInfoList(), refHash.getCRefGenSeq(), tempFile, slocs));
+                executor.submit(new MapQueue(refList, readList, reads.getReadInfoList(), refHash, tempFile, slocs));
             }else{  // Print this out as a "null" hit for retrieval later
                 
             }
@@ -63,15 +65,23 @@ public class allHitsMapper {
         private final List<SeqRead> readChunk;
         private final CompressedSeq cRefGen;
         private final SamplingLocs slocs;
+        private final AlphaCounter refAlphaCnt;
+        private final int refGenOffset;
+        private final int refGenLen;
+        private final int maxDist;
         
-        public MapQueue(List<GeneralIndex> refLocs, List<GeneralIndex> readLocs, List<SeqRead> readChunk, CompressedSeq cRefGen, TempMaxHitOutput tempFile, SamplingLocs slocs){
+        public MapQueue(List<GeneralIndex> refLocs, List<GeneralIndex> readLocs, List<SeqRead> readChunk, HashTable hash, TempMaxHitOutput tempFile, SamplingLocs slocs){
             // this needs to be an implementation of the MaqSeq funciton in mrsfast.c
             this.refLocs = refLocs;
             this.readLocs = readLocs;
             this.tempFile = tempFile;
             this.readChunk = readChunk;
-            this.cRefGen = cRefGen;
+            this.cRefGen = hash.getCRefGenSeq();
             this.slocs = slocs;
+            this.refGenOffset = hash.refGenOffset;
+            this.refGenLen = hash.refGenLength;
+            this.refAlphaCnt = hash.aCount;
+            this.maxDist = slocs.errThreshold << 1;
         }
 
         @Override
@@ -112,22 +122,16 @@ public class allHitsMapper {
         private void mapSeqListBal(int refLocIdx, int refSampLocSize, int readLocIdx, int readSampLocSize, int direction){
             // l1 is the refLocIdx for the private listing of ref genome generalIndex sites
             // l2 is the readLocIdx for the private listing of read generalIndex sites
-            if (refSampLocSize == 0 || readSampLocSize == 0)
-            {
+            if (refSampLocSize == 0 || readSampLocSize == 0){
                     return;
-            }
-            else if (refSampLocSize == readSampLocSize && refSampLocSize <= 200)
-            {
+            }else if (refSampLocSize == readSampLocSize && refSampLocSize <= 200){
                     int j = 0;
                     int z = 0;
                     int genInfo;
                     int seqInfo;
                     CompressedSeq _tmpCmpSeq;
-                    char tmp[];
-                    unsigned char *alph, *gl;
-                    char rqual[QUAL_LENGTH];
-                    rqual[QUAL_LENGTH] = '\0';
-                    char *_tmpQual, *_tmpSeq;
+                    int tmp[] = new int[4], readAlph[] = new int[4], refGenAlph[] = new int[4];
+                    //char *_tmpQual, *_tmpSeq;
 
                     if (direction > 0){
                             genInfo		= refLocIdx;
@@ -138,51 +142,55 @@ public class allHitsMapper {
                     }
 
 
-                    for (j=0; j<readSampLocSize; j++)
-                    {
+                    for (j=0; j<readSampLocSize; j++){
                             int re = slocs.samplingLocsSize * 2;
-                            int r = seqInfo[j].info / re;
+                            int r = this.readLocs.get(seqInfo + j).info / re;
 
-                            int x = seqInfo[j].info % re;
+                            int x = this.readLocs.get(seqInfo + j).info % re;
                             int o = x % slocs.samplingLocsSize;
-                            char d = (x/slocs.samplingLocsSize)?1:0;
+                            int d = (x/slocs.samplingLocsSize > 0)?1:0;
 
-                            if (_msf_seqList[r].hits[0] > maxHits)
+                            if (this.readChunk.get(r).hits > maxHits)
                                     continue;
 
-                            if (d)
-                            {
-                                    _tmpCmpSeq = _msf_seqList[r].crseq;
-                                    tmp[0]=_msf_seqList[r].alphCnt[3];
-                                    tmp[1]=_msf_seqList[r].alphCnt[2];
-                                    tmp[2]=_msf_seqList[r].alphCnt[1];
-                                    tmp[3]=_msf_seqList[r].alphCnt[0];
-                                    alph = tmp;
-                                    _tmpQual = &rqual[0];
-                                    reverse(_msf_seqList[r].qual, _tmpQual, QUAL_LENGTH);
-                                    _tmpSeq = _msf_seqList[r].rseq;
-                            }
-                            else
-                            {
-                                    _tmpCmpSeq = _msf_seqList[r].cseq;
-                                    alph = _msf_seqList[r].alphCnt;
-                                    _tmpQual = _msf_seqList[r].qual;
-                                    _tmpSeq = _msf_seqList[r].seq;
+                            if (d > 0){
+                                    _tmpCmpSeq = this.readChunk.get(r).compRevSeq;
+                                    // 0 = A, 1 = C, 2 = G, 3 = T, 4 = N
+                                    // Since this is reversed, we use the reverse complement to get 
+                                    // the count
+                                    tmp[0]=this.readChunk.get(r).GetBaseCnt("T");
+                                    tmp[1]=this.readChunk.get(r).GetBaseCnt("G");
+                                    tmp[2]=this.readChunk.get(r).GetBaseCnt("C");
+                                    tmp[3]=this.readChunk.get(r).GetBaseCnt("A");
+                                    readAlph = tmp;
+                            }else{
+                                    _tmpCmpSeq = this.readChunk.get(r).compSeq;
+                                    readAlph[0] = this.readChunk.get(r).GetBaseCnt("A");
+                                    readAlph[1] = this.readChunk.get(r).GetBaseCnt("C");
+                                    readAlph[2] = this.readChunk.get(r).GetBaseCnt("G");
+                                    readAlph[3] = this.readChunk.get(r).GetBaseCnt("T"); 
                             }
 
 
-                            for (z=0; z<refSampLocSize; z++)
-                            {
+                            for (z=0; z<refSampLocSize; z++){
 
-                                    int genLoc = genInfo[z].info-_msf_samplingLocs[o];
+                                    int genLoc = this.refLocs.get(genInfo +z).info - slocs.samplingLocs[o];
 
-                                    if (genLoc < _msf_refGenBeg || genLoc > _msf_refGenEnd)
+                                    if (genLoc < this.refGenOffset || genLoc > this.refGenLen)
                                             continue;
 
                                     int err = -1;
-                                    gl = _msf_alphCnt + ((genLoc-1)<<2);
-
-                                    if ( SNPMode || abs(gl[0]-alph[0]) + abs(gl[1]-alph[1]) + abs(gl[2]-alph[2]) + abs(gl[3]-alph[3]) <= _msf_maxDistance )
+                                    // "gl" is the base count for this region of the genome
+                                    refGenAlph = this.refAlphaCnt.getCounterAtLoc(genLoc - 1);
+                                    
+                                    // Since SNPMode is meaningless to me, this basically just checks the 
+                                    // alpha count between the ref genome and the read sample. If they differ
+                                    // then the sequence is verified, the error is counted and the sample's MD
+                                    // is generated
+                                    if (Math.abs(refGenAlph[0]-readAlph[0]) 
+                                            + Math.abs(refGenAlph[1]-readAlph[1]) 
+                                            + Math.abs(refGenAlph[2]-readAlph[2]) 
+                                            + Math.abs(refGenAlph[3]-readAlph[3]) <= this.maxDist)
                                             err = verifySeq(genLoc, _tmpCmpSeq, o, id);
 
                                     if (err != -1)
@@ -223,9 +231,7 @@ public class allHitsMapper {
 
                             }
                     }
-            }
-            else
-            {
+            }else{
                     int tmp1=refSampLocSize/2, tmp2= readSampLocSize/2;
                     if (tmp1 != 0)
                             mapSeqListBal(refLocIdx, tmp1, readLocIdx+tmp2, readSampLocSize-tmp2, direction);
@@ -236,6 +242,5 @@ public class allHitsMapper {
                             mapSeqListBal(readLocIdx, tmp2, refLocIdx, tmp1, -direction);
             }
         }
-        
     }
 }

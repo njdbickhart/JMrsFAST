@@ -14,7 +14,7 @@ import static readinput.StringUtils.*;
  * @author desktop
  */
 public class SeqRead {
-    private final List<CompressedHit> hits = new ArrayList<>();
+    public int hits = 0;
     public CompressedSeq compSeq;
     public CompressedSeq compRevSeq;
     public final String seq;
@@ -44,8 +44,8 @@ public class SeqRead {
         }
     }
     
-    public void AddHit(CompressedHit h){
-        this.hits.add(h);
+    public void AddHit(){
+        this.hits += 1;
     }
     
     public int GetBaseCnt(String c){

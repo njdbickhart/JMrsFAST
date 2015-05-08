@@ -61,10 +61,14 @@ public class AlphaCounter {
         this.counter[actualPos] -= 1;
     }
     
-    public byte[] getCounterAtLoc(int counterIdx){
+    public int[] getCounterAtLoc(int counterIdx){
         byte[] count = new byte[4];
         int actualPos = (counterIdx * 4);
         count = Arrays.copyOfRange(this.counter, actualPos, actualPos + 4);
-        return count;
+        int[] dial = new int[4];
+        for(int i = 0; i < 4; i++){
+            dial[i] = count[i];
+        }
+        return dial;
     }
 }

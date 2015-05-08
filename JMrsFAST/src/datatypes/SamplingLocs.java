@@ -5,6 +5,8 @@
  */
 package datatypes;
 
+import jmrsfast.ErrorSamples;
+
 /**
  *
  * @author Dbick
@@ -19,8 +21,9 @@ public class SamplingLocs{
         public final int errThreshold;
         public final int windowSize;
         public final int seqLen;
+        public final byte[] errorCount;
         
-        public SamplingLocs(int errThreshold, int windowSize, int seqLen){
+        public SamplingLocs(int errThreshold, int windowSize, int seqLen, ErrorSamples errors){
             int i;
             this.errThreshold = errThreshold;
             this.windowSize = windowSize;
@@ -46,5 +49,8 @@ public class SamplingLocs{
                     samplingLocsLen[i]		= samplingLocs[i+1] - samplingLocs[i];
                     samplingLocsLenFull[i]	= seqLen - samplingLocs[i];
             }
+            
+            int x;
+            this.errorCount = errors.errorCount;
         }
     }
