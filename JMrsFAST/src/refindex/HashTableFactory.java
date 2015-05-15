@@ -91,8 +91,10 @@ public class HashTableFactory {
         try{
             if(!this.ChrInfo.containsKey(chr))
                 throw new Exception("[HASHTBLFACT] Could not load index for chromosome: " + chr + "!");
-            byte[] block = new byte[this.ChrInfo.get(chr)];
+            byte[] block = new byte[this.ChrInfo.get(chr)]; // TODO: this should be contigmaxsize
             
+            // TODO: get all of the contig block metadata BEFORE sending the block to the hashgenerator!
+            // ALSO incorporate the new crefgen size int that I added to the hash table saver
             reader.read(block);
             hash  = new HashTable(block[0], windowSize, checksumLen, seqLen);
             

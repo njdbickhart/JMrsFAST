@@ -17,6 +17,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import readinput.CompressedSeq;
 
 /**
  *
@@ -39,6 +40,37 @@ public class RefGenomeHasher {
         
     }
     
+    // 1 byte (extraInfo): Reserved; in case the contig has extra information (flag variable)
+    // 2 bytes (len): Length of the reference genome name
+    // n bytes (refGenName): Reference genome name
+    // 4 bytes (refGenOffset): Offset of the contig from the beginning of the chromosome
+    // 4 bytes (refGenLength): Length of reference genome
+    // 4 bytes (crefGenLen) : bytes of compressed ref genome stored in this block
+    // n bytes (crefGen): compressed reference genome
+    // 4 bytes (size): number of hashValues in hashTable with more than 0 locations
+    // n bytes (bufferSize and buffer): array of bufferSize/buffer which includes encoded values of hashValue, count of locations
+    private void saveRefGenomeHash(char[] refgen, int numHash, String chrName, int refGenOffset, int refGenLen, int flag){
+        try {
+            this.index.write(flag);
+            
+            this.index.write(HashUtils.intToTwoByteArray(chrName.length()));
+            this.index.write(chrName.getBytes());
+            
+            this.index.write(HashUtils.intToByteArray(refGenOffset));
+            this.index.write(HashUtils.intToByteArray(refGenLen));
+            
+            CompressedSeq temp = new CompressedSeq(refgen);
+            this.index.write(temp.CompSeq.size() * 8);
+            this.index.write(temp.getByteList());
+            
+            this.index.write(HashUtils.intToByteArray(numHash));
+            
+            //TODO: incorporate HashTable into the hash saver
+        } catch (IOException ex) {
+            Logger.getLogger(RefGenomeHasher.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        
+    }
     
     private MetaData getGenomeMetaData(){
         MetaData metadata = new MetaData();
@@ -84,6 +116,19 @@ public class RefGenomeHasher {
             index.writeByte(3);
             index.writeByte(this.windowSize);
             // TODO: finalize initialization method
+            
+            // Initial value for maximum hash table size
+            byte[] temp = HashUtils.intToByteArray(0);
+            index.write(temp);
+            
+            temp = HashUtils.intToByteArray(1 << 24);
+            index.write(temp);
+            
+            temp = HashUtils.intToByteArray(jmrsfast.Constants.MAX_CONTIG_SIZE);
+            index.write(temp);
+            
+            byte[] meta = metadata.getByteEncoding();
+            index.write(meta);
         } catch (FileNotFoundException ex) {
             Logger.getLogger(RefGenomeHasher.class.getName()).log(Level.SEVERE, null, ex);
         } catch (IOException ex) {
@@ -106,7 +151,7 @@ public class RefGenomeHasher {
         public List<Integer> chrSizes = new ArrayList<>();
         public List<String> chrNames = new ArrayList<>();
         
-        public Byte[] getByteEncoding(){
+        public byte[] getByteEncoding(){
             List<Byte> code = new ArrayList<>();
             byte[] temp = HashUtils.intToByteArray(chrCount);
             code.addAll(addBytes(temp));
@@ -122,8 +167,11 @@ public class RefGenomeHasher {
                 code.addAll(addBytes(temp));
             }
             
-            Byte[] block = new Byte[code.size()];
-            return code.toArray(block);
+            byte[] block = new byte[code.size()];
+            for(int i = 0; i < code.size(); i++){
+                block[i] = (byte) code.get(i);
+            }
+            return block;
         }
         
         private List<Byte> addBytes(byte[] temp){

@@ -5,6 +5,7 @@
  */
 package refindex;
 
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -36,6 +37,10 @@ public class HashUtils {
         return value;
     }
     
+    public static byte[] longToByteArray(long l){
+        return ByteBuffer.allocate(8).putLong(0, l).array();
+    }
+    
     public static int byteArrayToInt(byte[] b) {
         int value = 0;
         for (int i = 0; i < b.length; i++) {
@@ -45,12 +50,20 @@ public class HashUtils {
         return value;
     }
     
+    // TODO: check to see if this is an endian issue
     public static byte[] intToByteArray(int a){
         byte[] ret = new byte[4];
         ret[3] = (byte) (a & 0xFF);   
         ret[2] = (byte) ((a >> 8) & 0xFF);   
         ret[1] = (byte) ((a >> 16) & 0xFF);   
         ret[0] = (byte) ((a >> 24) & 0xFF);
+        return ret;
+    }
+    
+    public static byte[] intToTwoByteArray(int a){
+        byte[] ret = new byte[2];
+        ret[0] = (byte) (a & 0xFF);
+        ret[1] = (byte) ((a >> 8) & 0xFF);
         return ret;
     }
     

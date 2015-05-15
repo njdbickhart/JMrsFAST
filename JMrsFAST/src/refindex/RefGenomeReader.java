@@ -56,6 +56,11 @@ public class RefGenomeReader {
         int actualSize = 0;
         try{
             String line;
+            if(isStarted && this.RefGenomeOffset == 0){
+                // Just picked back up after reading a prior chromosome
+                this.CurrentContigName = this.NextContigName;
+            }
+            
             if(! isStarted){
                 line = this.input.readLine();
                 this.CurrentContigName = line.trim().replaceAll(">", "");

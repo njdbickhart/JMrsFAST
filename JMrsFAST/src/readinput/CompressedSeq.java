@@ -43,6 +43,25 @@ public class CompressedSeq {
             CompSeq.set(i, CompSeq.get(i) << (3 * (21 - i)));
         }
     }
+    public CompressedSeq(char[] seq){
+        int i = 0, pos = 0;
+        this.CompSeq = Collections.synchronizedList(new ArrayList<Long>(seq.length / 21));
+        // Start with forward sequence string
+        CompSeq.add(0l);
+        while(pos < seq.length){
+            CompSeq.set(i, ((CompSeq.get(i) << 3)) | BaseToIndex(seq[pos++]));
+            
+            if(++i == 21){
+                i = 0;
+                
+                if(pos < seq.length)  // This prevents the addition of a new element if the sequence is exactly 21 chars
+                    CompSeq.add(0l);
+            }
+        }
+        if(i > 0){
+            CompSeq.set(i, CompSeq.get(i) << (3 * (21 - i)));
+        }
+    }
     
     public Stream<Long> getStream(){
         return this.CompSeq.stream();
@@ -73,5 +92,17 @@ public class CompressedSeq {
             current = this.CompSeq.get(seqLocation / 64);
         }
         return current;
+    }
+    
+    public byte[] getByteList(){
+        byte[] ret = new byte[this.CompSeq.size() * 8];
+        for(int i = 0; i < this.CompSeq.size(); i++){
+            byte[] temp = HashUtils.longToByteArray(this.CompSeq.get(i));
+            for(int j = 0; j < temp.length; j++){
+                int retidx = (8 * i) + j;
+                ret[retidx] = temp[j];
+            }
+        }
+        return ret;
     }
 }

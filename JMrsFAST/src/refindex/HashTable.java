@@ -33,6 +33,7 @@ public class HashTable {
     // n bytes (refGenName): Reference genome name
     // 4 bytes (refGenOfsset): Offset of the contig from the beginning of the chromosome
     // 4 bytes (refGenLength): Length of reference genome
+    // 4 bytes (crefGenLen) : bytes of compressed ref genome stored in this block
     // n bytes (crefGen): compressed reference genome
     // 4 bytes (size): number of hashValues in hashTable with more than 0 locations
     // n bytes (bufferSize and buffer): array of bufferSize/buffer which includes encoded values of hashValue, count of locations
