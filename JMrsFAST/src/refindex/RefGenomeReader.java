@@ -29,6 +29,7 @@ public class RefGenomeReader {
      *
      */
     public boolean isStarted = false;
+    public readerState CurrentState = readerState.NOT_STARTED;
     private BufferedReader input;
     
     /**
@@ -45,15 +46,20 @@ public class RefGenomeReader {
     
     /**
      *
-     * @return flag
      *  0 = no retrieval
      *  1 = Loaded fasta, didn't reach next contig
      *  2 = Loaded fasta, next contig is loaded
      *  3 = Loaded fasta, end of file
      */
-    public int RetrieveGenomeArray(){
+    public void RetrieveGenomeArray(){
         this.RefGenomeSize = 0;
         int actualSize = 0;
+        
+        if(this.CurrentState == readerState.LOADED_EOF || this.CurrentState == readerState.FINISHED){
+            this.CurrentState = readerState.FINISHED;
+            return;
+        }
+        
         try{
             String line;
             if(isStarted && this.RefGenomeOffset == 0){
@@ -79,7 +85,8 @@ public class RefGenomeReader {
                 if(line.startsWith(">")){
                     this.NextContigName = line.trim().replaceAll(">", "");
                     this.RefGenomeOffset = 0;
-                    return 2;
+                    this.CurrentState = readerState.LOADED_FULL_CONTIG;
+                    //return 2;
                 }
                 char[] bases = line.trim().toUpperCase().toCharArray();
                 for(int x = 0; x < bases.length; x++){
@@ -89,15 +96,18 @@ public class RefGenomeReader {
                     if((actualSize > jmrsfast.Constants.OFF_CONTIG_SIZE || this.RefGenomeSize > jmrsfast.Constants.MAX_CONTIG_SIZE) && this.RefGenomeSize % 21 == 0){
                         // We're splitting up larger chromosomes into chunks for lower memory overhead
                         this.RefGenomeOffset += this.RefGenomeSize;
-                        return 1;
+                        this.CurrentState = readerState.LOADED_SPLIT_CONTIG;
+                        //return 1;
                     }
                 }
             }
-            return 3;
+            this.CurrentState = readerState.LOADED_EOF;
+            //return 3;
         }catch(IOException ex){
             ex.printStackTrace();
         }
-        return 0;
+        this.CurrentState = readerState.NO_RETRIEVAL;
+        //return 0;
     }
     
     public String GetCurrentRefName(){
@@ -106,5 +116,9 @@ public class RefGenomeReader {
     
     public char[] GetCurrentGenomeArray(){
         return this.GenomeArray;
+    }
+    
+    public enum readerState{
+        NOT_STARTED, NO_RETRIEVAL, LOADED_SPLIT_CONTIG, LOADED_FULL_CONTIG, LOADED_EOF, FINISHED
     }
 }

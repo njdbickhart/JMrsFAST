@@ -18,6 +18,7 @@ import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import readinput.CompressedSeq;
+import refindex.RefGenomeReader.readerState;
 
 /**
  *
@@ -40,6 +41,21 @@ public class RefGenomeHasher {
         
     }
     
+    private void BeginHashing(MetaData metadata) throws Exception{
+        // Create fasta reader class and begin pulling sequence
+        RefGenomeReader fastaReader = new RefGenomeReader(this.fastaFile);
+        
+        while(fastaReader.CurrentState != readerState.FINISHED){
+            fastaReader.RetrieveGenomeArray();
+            
+            if(fastaReader.CurrentState == readerState.NO_RETRIEVAL)
+                throw new Exception("Error! Could not properly read Genome fasta file!");
+            
+            char[] genome = fastaReader.GetCurrentGenomeArray();
+            
+        }
+    }
+    
     // 1 byte (extraInfo): Reserved; in case the contig has extra information (flag variable)
     // 2 bytes (len): Length of the reference genome name
     // n bytes (refGenName): Reference genome name
@@ -49,8 +65,9 @@ public class RefGenomeHasher {
     // n bytes (crefGen): compressed reference genome
     // 4 bytes (size): number of hashValues in hashTable with more than 0 locations
     // n bytes (bufferSize and buffer): array of bufferSize/buffer which includes encoded values of hashValue, count of locations
-    private void saveRefGenomeHash(char[] refgen, int numHash, String chrName, int refGenOffset, int refGenLen, int flag){
+    private void saveRefGenomeHash(char[] refgen, String chrName, int refGenOffset, int refGenLen, int flag){
         try {
+            int numHash = 0;
             this.index.write(flag);
             
             this.index.write(HashUtils.intToTwoByteArray(chrName.length()));

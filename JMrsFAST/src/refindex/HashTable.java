@@ -53,6 +53,16 @@ public class HashTable {
     public AlphaCounter aCount;
     private int moreMaps = 0;
     
+    /*
+        Constructor for refGenomeHasher
+    */
+    public HashTable(int extraInfo, int windowSize, int seqLen){
+        this.extraInfo = (byte) extraInfo;
+        this.windowSize = windowSize;
+        this.seqLen = seqLen;
+        this.checkSumLen = 0;
+    }
+    
     public HashTable(byte extraInfo, int windowSize, int checkSumLen, int seqLen){
         this.extraInfo = extraInfo;
         this.windowSize = windowSize;
@@ -146,6 +156,12 @@ public class HashTable {
         holder = null;
         aCount = new AlphaCounter(holderF);
         holderF = null;
+    }
+    
+    public Map<Long, List<Integer>> HashRefGenome(){
+        Map<Long, List<Integer>> table = new HashMap<>();
+        // TODO: generate hashtable for hashing
+        return table;
     }
     
     protected class GenerateHashOnFly implements Runnable{
